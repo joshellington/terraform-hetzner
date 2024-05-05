@@ -1,8 +1,9 @@
 package_update: true
 package_upgrade: true
 
-timezone: Europe/Berlin
+# timezone: Europe/Berlin
 
+hostname: web-{{ index }}
 manage_etc_hosts: true
 
 packages:
@@ -10,6 +11,8 @@ packages:
   - curl
   - git
   - snapd
+  - ffmpeg
+  - yt-dlp
 
 users:
   - default
@@ -19,14 +22,15 @@ users:
     sudo:
       - ALL=(ALL) NOPASSWD:ALL
     shell: /bin/bash
-    ssh_import_id:
-      - gh:luizkowalski
+    ssh_authorized_keys:
+      - ssh-ed25519
     uid: 1000
 
 write_files:
   - path: /etc/cloud/templates/hosts.debian.tmpl
     content: |
-      10.0.0.2 web
+      10.0.2.2 web-1
+      10.0.3.2 web-2
       10.0.0.3 accessories
     append: true
   - path: /etc/netplan/01-netplan.yaml

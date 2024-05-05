@@ -7,7 +7,7 @@ variable "hetzner_api_key" {
 # https://docs.hetzner.com/cloud/general/locations#what-locations-are-there
 variable "region" {
   type    = string
-  default = "nbg1"
+  default = "hil"
 }
 
 # Hetnzer Server types:

@@ -1,22 +1,22 @@
-resource "hcloud_ssh_key" "ssh_key_for_hetzner" {
-  name       = "ssh-key-for-hetzner"
-  public_key = file("~/.ssh/hetzner.pub")
+data "hcloud_ssh_key" "ssh_key_for_hetzner" {
+  name = "id_brood_hetzner"
 }
 
 resource "hcloud_network" "network" {
-  name     = "private-sumiu-network"
+  name     = "private-brood-network"
   ip_range = "10.0.0.0/16"
 }
 
 resource "hcloud_network_subnet" "network_subnet" {
   type         = "cloud"
   network_id   = hcloud_network.network.id
-  network_zone = "eu-central"
+  network_zone = "us-west"
   ip_range     = "10.0.0.0/16"
 }
 
 resource "hcloud_server" "web" {
-  name        = "web"
+  count       = var.web_servers
+  name        = "web-${count.index + 1}"
   image       = var.operating_system
   server_type = var.server_type
   location    = var.region
@@ -29,11 +29,11 @@ resource "hcloud_server" "web" {
 
   network {
     network_id = hcloud_network.network.id
-    ip         = "10.0.0.2"
+    ip         = "10.0.${count.index + 2}.2"
   }
 
   ssh_keys = [
-    hcloud_ssh_key.ssh_key_for_hetzner.id
+    data.hcloud_ssh_key.ssh_key_for_hetzner.id
   ]
 
   depends_on = [
@@ -45,6 +45,33 @@ resource "hcloud_server" "web" {
     ipv6_enabled = true
   }
 }
+
+resource "hcloud_load_balancer" "load_balancer" {
+  name               = "brood-lb"
+  location           = var.region
+  load_balancer_type = "lb11"
+}
+
+resource "hcloud_load_balancer_target" "load_balancer_target" {
+  for_each         = { for idx, server in hcloud_server.web : idx => server }
+  type             = "server"
+  load_balancer_id = hcloud_load_balancer.load_balancer.id
+  server_id        = each.value.id
+}
+
+resource "hcloud_load_balancer_service" "http_service" {
+  load_balancer_id = hcloud_load_balancer.load_balancer.id
+  protocol         = "http"
+  listen_port      = 80
+  destination_port = 80
+}
+
+# resource "hcloud_load_balancer_service" "https_service" {
+#   load_balancer_id = hcloud_load_balancer.load_balancer.id
+#   protocol         = "https"
+#   listen_port      = 443
+#   destination_port = 443
+# }
 
 resource "hcloud_server" "accessories" {
   name        = "accessories"
@@ -65,7 +92,7 @@ resource "hcloud_server" "accessories" {
   }
 
   ssh_keys = [
-    hcloud_ssh_key.ssh_key_for_hetzner.id
+    data.hcloud_ssh_key.ssh_key_for_hetzner.id
   ]
 
   public_net {
